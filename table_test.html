@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Firebase EXAMPLE</h1><br />
+    <div id="containerSit"></div>
+    <div id="containerStd"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-firestore.js"></script>
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcigtFJPahXt3cgvnCX3NiIBvJDkBBOTQ",
+            authDomain: "study-timer-9744a.firebaseapp.com",
+            databaseURL: "https://study-timer-9744a-default-rtdb.firebaseio.com",
+            projectId: "study-timer-9744a",
+            storageBucket: "study-timer-9744a.appspot.com",
+            messagingSenderId: "483731810609",
+            appId: "1:483731810609:web:e36d1559a8ef62c3032810",
+            measurementId: "G-RQ3WL1LX1G"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // 데이터베이스 변수
+        const database = firebase.database();
+    // 데이터베이스 경로에 대한 이벤트 리스너 설정
+    database.ref('/sit').on('child_added', function (snapshot) {
+        // 새로운 데이터가 추가될 때마다 호출됨
+        var newData = snapshot.val();
+        displayData(newData, snapshot.key, 'containerSit', 'start-time'); // 'start-time' 데이터를 표시
+    });
+    database.ref('/std').on('child_added', function (snapshot) {
+        // 새로운 데이터가 추가될 때마다 호출됨
+        var newData = snapshot.val();
+        displayData(newData, snapshot.key, 'containerStd', 'stop-time'); // 'stop-time' 데이터를 표시
+    });
+
+    // 데이터를 표시하는 함수
+    function displayData(data, timestamp, containerId, timeType) {
+        // 데이터를 표시할 HTML 요소 선택
+        const container = document.getElementById(containerId);
+
+        // 선택한 'start-time' 또는 'stop-time' 배열에서 Date 객체 생성
+        const timeArray = data[timeType]; // 'start-time' 또는 'stop-time' 데이터를 배열로 가정
+        const timeDate = new Date(timeArray[0], timeArray[1] - 1, timeArray[2], timeArray[3], timeArray[4], timeArray[5]);
+
+        // 유효한 날짜인지 확인
+        if (!isNaN(timeDate.getTime())) {
+            const formattedDate = timeDate.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+            const displayText = `${timeType === 'start-time' ? 'Start Time' : 'Stop Time'}: ${formattedDate}`;
+
+            // 받아온 데이터와 함께 입력된 시간을 표시할 HTML 요소 생성
+            const newDataElement = document.createElement('p');
+            newDataElement.textContent = displayText; // 데이터와 시간 함께 표시
+
+            // 선택한 요소에 데이터 추가
+            container.appendChild(newDataElement);
+        } else {
+            // 유효하지 않은 날짜라면 오류 메시지 출력
+            console.error('Invalid Date');
+        }
+    }
+
+
+
+
+    </script>
+</body>
+
+</html>

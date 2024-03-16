@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>시간 측정 페이지</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database.js" type="module"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://study-timer-9744a-default-rtdb.firebaseio.com"></script>
+
+
+
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #timer {
+            font-size: calc(min(100vw, 100vh) / 10);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #buttonContainer {
+            position: absolute;
+            top: calc(50% + min(100vw, 100vh) / 16 + 20px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            font-size: calc(min(100vw, 100vh) / 20);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            background-color: #77dd77;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #5cb85c;
+        }
+
+        #record-time {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 25%;
+            /* 화면의 1/4 크기 */
+            background-color: #f2f2f2;
+            overflow-y: auto;
+            /* 리스트가 길어질 경우 스크롤 가능하도록 설정 */
+            border-left: 1px solid #ccc;
+            padding: 20px;
+        }
+
+        /* table style */
+        #data-list table {
+
+            margin: 0 auto;
+            text-align: center;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+
+        th,
+        td {
+            padding: 10px 30px;
+        }
+
+        th {
+            border-bottom: 1px solid #d4d4d4;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="timer">00:00</div>
+    <div id="buttonContainer">
+        <button id="startStopButton">시작</button>
+        <button id="resetButton">리셋</button>
+        <button id="saveButton">저장</button>
+    </div>
+    <div id="record-time">
+        <div id="data-list"></div> <!-- CSV 데이터를 표시할 div -->
+    </div>
+    <div id="data-connect">
+
+    </div>
+
+
+    <script>
+        let time = 0;
+        let isRunning = false;
+        let interval;
+        const timerElement = document.getElementById('timer');
+        const startStopButton = document.getElementById('startStopButton');
+        const resetButton = document.getElementById('resetButton');
+        const saveButton = document.getElementById('saveButton');
+
+
+        // 타이머와 저장 기능은 유지됩니다.
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            const formattedTime =
+                (minutes < 10 ? '0' : '') + minutes + ':' +
+                (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
+            return formattedTime;
+        }
+
+        function startTimer() {
+            interval = setInterval(() => {
+                time++;
+                const formattedTime = formatTime(time);
+                timerElement.textContent = formattedTime;
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(interval);
+            time = 0;
+            timerElement.textContent = '00:00';
+            isRunning = false;
+            startStopButton.textContent = '시작';
+        }
+
+        /*
+                startStopButton.addEventListener('click', () => {
+                    if (!isRunning) {
+                        startTimer();
+                        isRunning = true;
+                        startStopButton.textContent = '멈춤';
+                    } else {
+                        clearInterval(interval);
+                        isRunning = false;
+                        startStopButton.textContent = '시작';
+                    }
+                });
+        
+                resetButton.addEventListener('click', () => {
+                    resetTimer();
+                });
+        
+        */
+
+        function successFunction(data) {
+            var allRows = data.split(/\r?\n|\r/);
+            var table = '<table>';
+
+            for (var singleRow = 0; singleRow < allRows.length; singleRow++) {
+                if (singleRow === 0) {
+                    table += '<thead>';
+                    table += '<tr>';
+                } else {
+                    table += '<tr>';
+                }
+                var rowCells = allRows[singleRow].split(',');
+                for (var rowCell = 0; rowCell < rowCells.length; rowCell++) {
+                    if (singleRow === 0) {
+                        table += '<th>';
+                        table += rowCells[rowCell];
+                        table += '</th>';
+                    } else {
+                        table += '<td>';
+                        table += rowCells[rowCell];
+                        table += '</td>';
+                    }
+                }
+                if (singleRow === 0) {
+                    table += '</tr>';
+                    table += '</thead>';
+                    table += '<tbody>';
+                } else {
+                    table += '</tr>';
+                }
+            }
+            table += '</tbody>';
+            table += '</table>';
+            $('#data-list').append(table);
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcigtFJPahXt3cgvnCX3NiIBvJDkBBOTQ",
+            authDomain: "study-timer-9744a.firebaseapp.com",
+            databaseURL: "https://study-timer-9744a-default-rtdb.firebaseio.com",
+            projectId: "study-timer-9744a",
+            storageBucket: "study-timer-9744a.appspot.com",
+            messagingSenderId: "483731810609",
+            appId: "1:483731810609:web:e36d1559a8ef62c3032810",
+            measurementId: "G-RQ3WL1LX1G"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // 함수로 버튼 클릭 대신 직접 타이머를 제어하는 방식으로 변경
+        function startTimerAndButton() {
+            startTimer();
+            isRunning = true;
+            startStopButton.textContent = '멈춤';
+        }
+
+        function stopTimerAndButton() {
+            clearInterval(interval);
+            isRunning = false;
+            startStopButton.textContent = '시작';
+        }
+
+        // Firebase 데이터베이스 이벤트 리스너 설정
+        function handleSitEvent(snapshot) {
+            console.log("sit 이벤트가 트리거되었습니다.");
+            resetTimer();
+            startTimerAndButton();
+        }
+
+        function handleStdEvent(snapshot) {
+            console.log("std 이벤트가 트리거되었습니다.");
+            stopTimerAndButton();
+        }
+
+        // 이벤트 리스너 등록
+        database.ref('/sit').on('child_added', handleSitEvent);
+        database.ref('/std').on('child_added', handleStdEvent);
+
+    </script>
+</body>
+
+</html>
